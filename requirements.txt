@@ -1,0 +1,7 @@
+praw>=7.7
+anthropic>=0.40
+python-dotenv>=1.0
+pandas>=2.0
+flask>=3.0
+waitress>=3.0
+markdown>=3.5

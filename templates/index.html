@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pain Signal</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2313233A'/><rect x='6' y='13' width='20' height='7' rx='2' fill='%23FFE14D'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}?v={{ v }}">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="mark-logo" aria-hidden="true"></span>
+    <span class="wordmark">Pain&nbsp;<span class="hl">Signal</span></span>
+  </div>
+  <div class="keys" id="keys" aria-live="polite"></div>
+  <button class="btn ghost" id="open-settings" type="button">Settings</button>
+</header>
+
+<div class="shell">
+  <aside class="rail">
+    <form id="run-form" class="card" novalidate>
+      <h2 class="eyebrow">New research run</h2>
+
+      <fieldset>
+        <legend>Subreddits</legend>
+        <div class="chips" id="subs"></div>
+        <input class="add" id="add-sub" placeholder="Add a subreddit, press Enter" autocomplete="off" aria-label="Add a subreddit">
+      </fieldset>
+
+      <fieldset>
+        <legend>Search phrases</legend>
+        <div class="chips" id="kws"></div>
+        <input class="add" id="add-kw" placeholder="Add a phrase, press Enter" autocomplete="off" aria-label="Add a search phrase">
+      </fieldset>
+
+      <div class="row3">
+        <label>Time range
+          <select id="time"></select>
+        </label>
+        <label>Posts per search
+          <input id="limit" type="number" min="5" max="100" step="5">
+        </label>
+        <label>Comments per post
+          <input id="comments" type="number" min="0" max="20">
+        </label>
+      </div>
+
+      <p class="estimate" id="estimate"></p>
+      <p class="form-error" id="form-error" role="alert"></p>
+      <button class="btn primary" id="start" type="submit">Start research</button>
+    </form>
+
+    <section class="card history">
+      <h2 class="eyebrow">Past runs</h2>
+      <ol id="runs" class="runs"></ol>
+    </section>
+  </aside>
+
+  <main class="stage" id="stage" tabindex="-1">
+    <div id="empty" class="empty">
+      <h1>Find out what cloud engineers complain about, in their own words.</h1>
+      <p>Each run searches Reddit for the phrases on the left, then Claude reads every thread and writes a market validation report with verified quotes.</p>
+      <ol class="steps">
+        <li><b>Add your keys</b> in Settings: Reddit for searching, Anthropic for the analysis.</li>
+        <li><b>Pick subreddits and phrases</b>, then choose Start research.</li>
+        <li><b>Read the report</b> here, or download it as Markdown.</li>
+      </ol>
+    </div>
+
+    <article id="run" class="run" hidden>
+      <header class="run-head">
+        <div>
+          <p class="run-when" id="run-when"></p>
+          <h1 class="run-status" id="run-status"></h1>
+          <p class="run-sub" id="run-sub"></p>
+        </div>
+        <div class="run-actions" id="run-actions"></div>
+      </header>
+
+      <dl class="meters" id="meters"></dl>
+      <p class="run-error" id="run-error" role="alert" hidden></p>
+
+      <section class="coverage">
+        <div class="coverage-head">
+          <h2 class="eyebrow">Search coverage</h2>
+          <p class="legend"><span class="sw sw-0"></span>none <span class="sw sw-2"></span>some <span class="sw sw-4"></span>full page</p>
+        </div>
+        <div class="grid-wrap"><table class="grid" id="grid"></table></div>
+      </section>
+
+      <section class="report-wrap" id="report-wrap" hidden>
+        <div class="report-tools">
+          <h2 class="eyebrow">Report</h2>
+          <div>
+            <a class="btn ghost small" id="dl-md" download>Download .md</a>
+            <a class="btn ghost small" id="dl-json" download>Raw data .json</a>
+          </div>
+        </div>
+        <div class="report" id="report"></div>
+      </section>
+    </article>
+  </main>
+</div>
+
+<dialog id="settings" class="dialog" aria-labelledby="settings-title">
+  <form id="settings-form" method="dialog">
+    <h2 id="settings-title">Settings</h2>
+    <p class="hint">Keys are saved to <code>.env</code> in the project folder and never shown again. Leave a field blank to keep the saved value.</p>
+
+    <h3>Reddit</h3>
+    <p class="hint">Create a <b>script</b> app at <a href="https://www.reddit.com/prefs/apps" target="_blank" rel="noopener">reddit.com/prefs/apps</a>. The client ID is under “personal use script”.</p>
+    <label>Client ID <input name="reddit_client_id" autocomplete="off" spellcheck="false"></label>
+    <label>Client secret <input name="reddit_client_secret" type="password" autocomplete="off"></label>
+    <label>User agent <input name="reddit_user_agent" placeholder="pain-signal/1.0 by u/yourname" autocomplete="off" spellcheck="false"></label>
+
+    <h3>Anthropic</h3>
+    <p class="hint">Create a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>.</p>
+    <label>API key <span class="saved" id="anthropic-hint"></span><input name="anthropic_api_key" type="password" autocomplete="off" placeholder="sk-ant-…"></label>
+
+    <p class="form-error" id="settings-error" role="alert"></p>
+    <div class="dialog-actions">
+      <button class="btn ghost" value="cancel" formnovalidate type="button" id="close-settings">Close</button>
+      <button class="btn primary" id="save-settings" type="submit">Save keys</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="{{ url_for('static', filename='app.js') }}?v={{ v }}"></script>
+</body>
+</html>
